@@ -1,33 +1,43 @@
 from flask import Flask, request, jsonify
+import os
 import requests
 
 app = Flask(__name__)
 
-# Ton token Hugging Face (Ne le partage jamais)
-HUGGING_FACE_TOKEN = "VOTRE_CLE_API_ICI"  # Remplace par ton vrai token
+# Récupérer le token depuis les variables d'environnement
+API_TOKEN = os.getenv("HF_API_TOKEN")
+
+if not API_TOKEN:
+    raise ValueError("Le token de l'API Hugging Face est manquant. Définissez HF_API_TOKEN dans les variables d'environnement.")
+
+API_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill"
+HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
+
+@app.route("/", methods=["GET"])
+def home():
+    return "Bienvenue sur mon chatbot IA hébergé avec Flask et Render !"
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    data = request.json
-    question = data.get("message", "")
+    try:
+        data = request.get_json()
+        user_input = data.get("message")
 
-    headers = {"Authorization": f"Bearer {HUGGING_FACE_TOKEN}"}
-    payload = {"inputs": question}
+        if not user_input:
+            return jsonify({"error": "Message manquant"}), 400
 
-    response = requests.post(
-        "https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium",
-        headers=headers,
-        json=payload
-    )
+        response = requests.post(API_URL, headers=HEADERS, json={"inputs": user_input})
 
-    if response.status_code == 200:
+        if response.status_code != 200:
+            return jsonify({"error": "Erreur lors de la requête à l'API"}), 500
+
         result = response.json()
-        return jsonify({"response": result.get("generated_text", "Désolé, je ne peux pas répondre.")})
-    else:
-        return jsonify({"response": "Erreur avec l'IA"}), 500
+        bot_reply = result.get("generated_text", "Je n'ai pas compris.")
+
+        return jsonify({"response": bot_reply})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
-    if __name__ == "__main__":
-    from waitress import serve
-    serve(app, host="0.0.0.0", port=5000)
-
+    app.run(host="0.0.0.0", port=5000)
