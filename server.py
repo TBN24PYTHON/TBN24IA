@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import os
 import requests
 
@@ -15,7 +15,7 @@ HEADERS = {"Authorization": f"Bearer {API_TOKEN}"}
 
 @app.route("/", methods=["GET"])
 def home():
-    return "Bienvenue sur mon chatbot IA hébergé avec Flask et Render !"
+    return render_template("index.html")  # 🔥 Affiche la page HTML du chatbot
 
 @app.route("/chat", methods=["POST"])
 def chat():
